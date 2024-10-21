@@ -19,15 +19,18 @@ float E_FON_analyt(float mu, float sigma)
 }
 
 // FON directional albedo (approx.)
-float E_FON_approx(float mu, float sigma)
+float E_FON_approx(float mu, float r)
 {
-    #define Gcoeffs_FON mat2(0.287021, -0.17486, -0.306961, 0.193945)
-    #define GoverPI_FON dot((Gcoeffs_FON * vec2(1,mu)) * vec2(1,mu*mu), vec2(1,1))
-    return (1.0 + GoverPI_FON) / (1.0 + constant1_FON*sigma);
+    float mucomp = 1.0f - mu;
+    float mucomp2 = mucomp * mucomp;
+    const mat2 Gcoeffs = mat2(0.0571085289f, -0.332181442f,
+    0.491881867f, 0.0714429953f);
+    float GoverPi = dot(Gcoeffs * vec2(mucomp, mucomp2), vec2(1.0f, mucomp2));
+    return (1.0f + r * GoverPi) / (1.0f + constant1_FON * r);
 }
 
-// EFON BRDF
-vec3 f_EFON(in vec3 rho, float sigma, in vec3 wi, in vec3 wo, bool exact)
+// EON BRDF
+vec3 f_EON(in vec3 rho, float sigma, in vec3 wi, in vec3 wo, bool exact)
 {
     float muI = wi.z;                                    // input angle cos
     float muO = wo.z;                                    // output angle cos
@@ -45,6 +48,17 @@ vec3 f_EFON(in vec3 rho, float sigma, in vec3 wi, in vec3 wo, bool exact)
                                 max(1e-7, 1.0 - EFi) /
                                 max(1e-7, 1.0 - avgEF);
     return f_ss + f_ms;
+}
+
+// EON albedo
+vec3 E_EON(in vec3 rho, float sigma, in vec3 wi)
+{
+    float muI = wi.z;                                    // input angle cos
+    float AF = 1.0 / (1.0 + constant1_FON*sigma);        // FON model A coefficient
+    float EF = E_FON_approx(muI, sigma);                 // EFi at rho=1 (approx)
+    float avgEF = AF * (1.0 + constant2_FON*sigma);      // average albedo
+    vec3 rho_ms = sqr(rho) * avgEF / (vec3(1.0) - rho*max(0.0, 1.0-avgEF));
+    return rho*EF + rho_ms*(1.0 - EF);
 }
 
 void ltc_terms(float mu, float r,
@@ -139,7 +153,7 @@ vec3 diffuse_brdf_evaluate(in vec3 pW, in Basis basis, in vec3 winputL, in vec3 
 {
     if (winputL.z < DENOM_TOLERANCE || woutputL.z < DENOM_TOLERANCE) return vec3(0.0);
     pdf_woutputL = pdf_EON(winputL, woutputL, base_roughness);
-    return f_EFON(base_weight * base_color, base_roughness, winputL, woutputL, true);
+    return f_EON(base_weight * base_color, base_roughness, winputL, woutputL, true);
 }
 
 vec3 diffuse_brdf_sample(in vec3 pW, in Basis basis, in vec3 winputL, inout uint rndSeed,
@@ -150,12 +164,12 @@ vec3 diffuse_brdf_sample(in vec3 pW, in Basis basis, in vec3 winputL, inout uint
     vec4 woP = sample_EON(winputL, base_roughness, u1, u2);
     woutputL     = woP.xyz;
     pdf_woutputL = woP.w;
-    return f_EFON(base_weight * base_color, base_roughness, winputL, woutputL, true);
+    return f_EON(base_weight * base_color, base_roughness, winputL, woutputL, true);
 }
 
 vec3 diffuse_brdf_albedo(in vec3 pW, in Basis basis, in vec3 winputL, inout uint rndSeed)
 {
     // Estimate of the BRDF albedo, used to compute the discrete probability of selecting this lobe
     if (winputL.z < DENOM_TOLERANCE) return vec3(0.0);
-    return base_weight * base_color;
+    return E_EON(base_weight * base_color, base_roughness, winputL);
 }

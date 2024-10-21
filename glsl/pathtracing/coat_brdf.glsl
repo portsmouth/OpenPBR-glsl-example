@@ -94,11 +94,9 @@ vec3 coat_brdf_sample(in vec3 pW, in Basis basis, in vec3 winputL, inout uint rn
     vec3 winputR = localToRotated(winputL, rotation);
 
     // Sample local microfacet normal mR, according to Heitz "Sampling the GGX Distribution of Visible Normals"
-    vec3 mR = ggx_ndf_sample(winputR, alpha_x, alpha_y, rndSeed);
-    if (winputR.z > 0.0)
-        mR = ggx_ndf_sample(winputR, alpha_x, alpha_y, rndSeed);
-    else
+    if (winputR.z <= 0.0)
         return vec3(0.0); // coat internal reflection ignored (not strictly physical)
+    vec3 mR = ggx_ndf_sample(winputR, alpha_x, alpha_y, rndSeed);
 
     // Compute woutputR (and thus woutputL) by reflecting winputR about mR
     vec3 woutputR = -winputR + 2.0*dot(winputR, mR)*mR;
