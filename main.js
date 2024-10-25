@@ -105,7 +105,7 @@ var params =
 
     scene_name:                         'standard-shader-ball',
     smooth_normals:                     true,
-    bounces:                            6,
+    bounces:                            10,
     max_samples:                        1024,
     max_volume_steps:                   8,
     wireframe:                          false,
@@ -115,7 +115,7 @@ var params =
     // lighting params
     //////////////////////////////////////////////////////
 
-    skyPower:                            0.6,
+    skyPower:                            1.0,
     skyColor:                            [1.0, 1.0, 1.0],
     sunPower:                            0.25,
     sunAngularSize:                      5.0,
@@ -818,7 +818,7 @@ function load_scene(scene_name)
     if (!env_map_texture)
     {
         const textureLoader = new TextureLoader();
-        let env_map_path = 'textures/envmaps/Alexs_Apt_8k.png';
+        let env_map_path = 'textures/envmaps/etzwihl_16k.jpg';
         let textureEquirec = textureLoader.load(env_map_path,
             function (texture) {
                 console.log('-> loaded env map: ', env_map_path);
@@ -1245,6 +1245,7 @@ function sync_shader_uniforms(uniforms)
 
 function render()
 {
+    console.log('render()')
     if (!LOADED)
     {
         console.log('not LOADED')
@@ -1328,8 +1329,22 @@ function render()
         renderer.autoClear = true;
     }
 
-    document.getElementById('samples').innerText = `samples: ${ samples }`;
+    // Text HUD update
+    let samples_txt = document.getElementById('samples');
+    let    info_txt = document.getElementById('info');
+    if (PATHTRACING)
+    {
+        samples_txt.style.visibility = 'visible';
+        samples_txt.innerText = `samples: ${ samples }`;
+        info_txt.innerText = `OpenPBR viewer, pathtracing mode (press 'R' for rasterization)`;
+    }
+    else
+    {
+        samples_txt.style.visibility = 'hidden';
+        info_txt.innerText = `OpenPBR viewer, rasterization mode (press 'R' for pathtracing)`;
+    }
 
+    // Progress spinner update
     if (!COMPILING)
     {
         let progress_overlay = document.getElementById('progress_overlay');
@@ -1341,7 +1356,6 @@ function render()
                 fadeOutProgressBar(300);
         }
     }
-
     if (COMPILING)
     {
         console.log('COMPILING...');
