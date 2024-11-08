@@ -593,7 +593,7 @@ void main()
                     surface_throughput *= xyzToRgb(xyzFit_1931(wavelength_nm)) * vec3(2.7, 3.3, 3.45);
                 dispersive = true;
             }
-#endif // TRANSMISSION_ENABLED
+#endif // DISPERSION_ENABLED
 
             // Update in_dielectric state
             in_dielectric = !in_dielectric;
@@ -619,7 +619,6 @@ void main()
                 vec3 fshadow = evaluateBsdf(pW, basis, winputL, shadowL, material, bsdfPdf_shadow);
                 float misWeightLight = powerHeuristic(lightPdf, bsdfPdf_shadow);
                 L += throughput * misWeightLight * fshadow * abs(dot(shadowW, basis.nW)) * Li / max(PDF_EPSILON, lightPdf);
-
             }
         } // direct lighting
 
